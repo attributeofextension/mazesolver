@@ -1,3 +1,4 @@
+from uuid import uuid4
 class Range:
     def __init__(self, start, end):
         if start > end:
@@ -161,16 +162,47 @@ class Vector:
         return self.p1.reduce_to_coordinates() + self.p2.reduce_to_coordinates()
 
 
-class LatticeNode(Point):
+class Vertex(Point):
     def __init__(self, x, y, point):
         super().__init__(x, y)
         self.point = point
-        self.north = None
-        self.east = None
-        self.south = None
-        self.west = None
+        self.x = x
+        self.y = y
+        self.id = f"{self.x},{self.y}"
 
 
+class MazeVertex(Vertex):
+    def __init__(self, x, y, point, is_boundary=False):
+        super().__init__(x, y, point)
+        self.is_boundary = is_boundary
+
+    def get_drawing_coordinates(self):
+        return self.point.x, self.point.y
+
+class Graph:
+    def __init__(self):
+        self.graph = {}
+    def add_edge(self, u, v):
+        if u not in self.graph:
+            self.graph[u] = set()
+        if v not in self.graph:
+            self.graph[v] = set()
+        self.graph[u].add(v)
+        self.graph[v].add(u)
+
+    def edge_exists(self, u, v):
+        if u in self.graph and v in self.graph:
+            return (v in self.graph[u]) and (u in self.graph[v])
+        return False
+
+    def list_edges(self):
+        edges = set()
+        for u in self.graph:
+            if self.graph[u]:
+                for v in self.graph[u]:
+                    edges.add((u, v))
+
+        return sorted(list(edges))
 class Lattice:
     def __init__(self, width, height, step):
         self.width = width
@@ -178,40 +210,39 @@ class Lattice:
         self.step = step
         self.horizontal_lines = []
         self.vertical_lines = []
-        self.north_west_node = None
-        self.south_west_node = None
-        self.north_east_node = None
-        self.south_east_node = None
+        self.hash_table = {}
+        self.grid = Graph()
 
-        maximum_length = width if width > height else height
+        maximum_length = width if width < height else height
 
-        count = 0
-        previous_x_node = None
-        previous_y_node = None
-        previous_slope_node = None
+        print(maximum_length)
+
         for x in range(self.step, maximum_length - self.step, self.step):
             self.horizontal_lines.append(VerticalLine(x))
             self.vertical_lines.append(HorizontalLine(x))
-            if x == self.step:
-                node = LatticeNode(count, count, self.horizontal_lines[count].get_intersection(self.vertical_lines[count]))
-                self.north_west_node = node
-                previous_x_node = node
-                previous_y_node = node
-                previous_slope_node = node
-                count += 1
-                continue
-            x_node = LatticeNode(0, count, self.horizontal_lines[count].get_intersection(self.vertical_lines[0]))
-            previous_x_node.east = x_node
-            x_node.west = previous_x_node
-            previous_x_node = x_node
 
-            y_node = LatticeNode(count, 0, self.horizontal_lines[0].get_intersection(self.vertical_lines[count]))
-            previous_y_node.south = y_node
+        print(len(self.horizontal_lines))
+        print(len(self.vertical_lines))
 
-
+        for i in range(0, len(self.horizontal_lines)+1, 2):
+            for j in range(0, len(self.vertical_lines)+1, 2):
+                if (i < len(self.horizontal_lines)) and (j < len(self.vertical_lines)):
+                    point = self.horizontal_lines[i].get_intersection(self.vertical_lines[j])
+                    is_boundary = i == 0 or j == 0 or i == len(self.horizontal_lines) - 1 or j == len(self.vertical_lines) - 1
+                    maze_vertex = MazeVertex(i, j, point, is_boundary)
+                    self.hash_table[maze_vertex.id] = maze_vertex
+                    if f"{i - 2},{j}" in self.hash_table:
+                        self.grid.add_edge(maze_vertex.id, self.hash_table[f"{i - 2},{j}"].id)
+                    if f"{i},{j - 2}" in self.hash_table:
+                        self.grid.add_edge(maze_vertex.id, self.hash_table[f"{i},{j - 2}"].id)
 
 
+    def get_grid_drawing_coordinates(self):
+        edges = self.grid.list_edges()
 
+        coordinates = list()
+        for edge in edges:
 
+            coordinates.append(self.hash_table[edge[0]].get_drawing_coordinates() + self.hash_table[edge[1]].get_drawing_coordinates())
 
-
+        return coordinates
