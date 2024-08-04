@@ -179,6 +179,25 @@ class MazeVertex(Vertex):
     def get_drawing_coordinates(self):
         return self.point.x, self.point.y
 
+
+class Edge:
+    def __init__(self, coordinates, fill_color='black'):
+        self.coordinates = coordinates
+        self.fill_color = fill_color
+
+class Wall(Edge):
+    def __init__(self, coordinates, fill_color='black'):
+        super().__init__(coordinates, fill_color)
+
+class Boundary(Edge):
+    def __init__(self, coordinates, fill_color='green'):
+        super().__init__(coordinates, fill_color)
+
+class Path(Edge):
+    def __init__(self, coordinates, fill_color='red'):
+        super().__init__(coordinates, fill_color)
+
+
 class Graph:
     def __init__(self):
         self.graph = {}
@@ -211,7 +230,9 @@ class Lattice:
         self.horizontal_lines = []
         self.vertical_lines = []
         self.hash_table = {}
+        self.path_hash_table = {}
         self.grid = Graph()
+        self.paths = Graph()
 
         maximum_length = width if width < height else height
 
@@ -221,11 +242,17 @@ class Lattice:
             self.horizontal_lines.append(VerticalLine(x))
             self.vertical_lines.append(HorizontalLine(x))
 
+        if len(self.horizontal_lines) % 2 == 0:
+            self.horizontal_lines = self.horizontal_lines[0:-1]
+
+        if len(self.vertical_lines) % 2 == 0:
+            self.vertical_lines = list(self.vertical_lines[0:-1])
+
         print(len(self.horizontal_lines))
         print(len(self.vertical_lines))
 
-        for i in range(0, len(self.horizontal_lines)+1, 2):
-            for j in range(0, len(self.vertical_lines)+1, 2):
+        for i in range(0, len(self.horizontal_lines), 2):
+            for j in range(0, len(self.vertical_lines), 2):
                 if (i < len(self.horizontal_lines)) and (j < len(self.vertical_lines)):
                     point = self.horizontal_lines[i].get_intersection(self.vertical_lines[j])
                     is_boundary = i == 0 or j == 0 or i == len(self.horizontal_lines) - 1 or j == len(self.vertical_lines) - 1
@@ -235,6 +262,18 @@ class Lattice:
                         self.grid.add_edge(maze_vertex.id, self.hash_table[f"{i - 2},{j}"].id)
                     if f"{i},{j - 2}" in self.hash_table:
                         self.grid.add_edge(maze_vertex.id, self.hash_table[f"{i},{j - 2}"].id)
+        for i in range(0, len(self.horizontal_lines)):
+            for j in range(0, len(self.vertical_lines)):
+                if f"{i},{j}" in self.hash_table:
+                    continue
+                point = self.horizontal_lines[i].get_intersection(self.vertical_lines[j])
+                is_boundary = i == 0 or j == 0 or i == len(self.horizontal_lines) - 1 or j == len(self.vertical_lines) - 1
+                path_vertex = MazeVertex(i, j, point, is_boundary)
+                self.path_hash_table[path_vertex.id] = path_vertex
+                if f"{i - 1},{j}" in self.path_hash_table:
+                    self.paths.add_edge(path_vertex.id, self.path_hash_table[f"{i - 1},{j}"].id)
+                if f"{i},{j - 1}" in self.path_hash_table:
+                    self.paths.add_edge(path_vertex.id, self.path_hash_table[f"{i},{j - 1}"].id)
 
 
     def get_grid_drawing_coordinates(self):
@@ -242,7 +281,18 @@ class Lattice:
 
         coordinates = list()
         for edge in edges:
+            if self.hash_table[edge[0]].is_boundary and self.hash_table[edge[1]].is_boundary:
+                coordinates.append(Boundary(self.hash_table[edge[0]].get_drawing_coordinates() + self.hash_table[edge[1]].get_drawing_coordinates()))
+            else:
+                coordinates.append(Wall(self.hash_table[edge[0]].get_drawing_coordinates() + self.hash_table[edge[1]].get_drawing_coordinates()))
 
-            coordinates.append(self.hash_table[edge[0]].get_drawing_coordinates() + self.hash_table[edge[1]].get_drawing_coordinates())
+        return coordinates
+
+    def get_path_drawing_coordinates(self):
+        edges = self.paths.list_edges()
+
+        coordinates = list()
+        for edge in edges:
+            coordinates.append(Path(self.path_hash_table[edge[0]].get_drawing_coordinates() + self.path_hash_table[edge[1]].get_drawing_coordinates()))
 
         return coordinates

@@ -1,5 +1,5 @@
 from tkinter import Tk, BOTH, Canvas
-from geometry import Point, Line
+from geometry import Point, Line, Edge
 from time import sleep
 
 class Window:
@@ -15,8 +15,8 @@ class Window:
         self.running = False
         self.__root.protocol("WM_DELETE_WINDOW", self.close)
 
-    def draw_line(self, coordinates, fill_color: str = "black"):
-        self.canvas.create_line(*coordinates, fill=fill_color, width=2)
+    def draw_line(self, edge: Edge):
+        self.canvas.create_line(*edge.coordinates, fill=edge.fill_color, width=2)
 
     def redraw(self):
         self.__root.update_idletasks()

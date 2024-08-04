@@ -6,9 +6,15 @@ if __name__ == '__main__':
     win = Window(1000, 1000)
 
     lattice = Lattice(800, 600, 10)
+    # path_draw_coordinates = lattice.get_path_drawing_coordinates()
+    # for coordinate in path_draw_coordinates:
+    #     win.draw_line(coordinate)
+
+
     grid_draw_coordinates = lattice.get_grid_drawing_coordinates()
     for coordinate in grid_draw_coordinates:
         win.draw_line(coordinate)
+
 
     win.wait_for_close()
 
